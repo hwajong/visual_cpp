@@ -1,0 +1,5 @@
+AES/Debug/
+Debug/
+ipch/
+AES/decoded.txt
+*.bin

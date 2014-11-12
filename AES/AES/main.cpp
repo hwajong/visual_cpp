@@ -215,7 +215,8 @@ void main()
 	make_hash(fname_key, fname_plain, fname_hash);
 
 	// TODO 패딩값을 알아야 디코딩 할 수 있게 되어있는데 ...
-	// PKCS 의 표준 패딩방식을 적용할것.
+	// PKCS7 의 표준 패딩방식을 적용할것.
+	// http://en.wikipedia.org/wiki/Padding_(cryptography)#Bit_padding
 	// AES 암호화
 	int padding_len = aes_encrypt(fname_key, fname_plain, fname_cipher);
 
