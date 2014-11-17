@@ -1,6 +1,8 @@
 #include <iostream>
+#include <cassert>
 #include "HMAC_SHA2.h"
 #include "AES.h"
+
 
 using namespace std;
 
@@ -117,15 +119,23 @@ void make_128bit_key(const char* fname_key)
 }
 
 // fname_in 파일을 읽어 AES 암호화한 후 fname_out 파일에 저장한다.
-int aes_encrypt(const char* fname_key, const char* fname_in, const char* fname_out)
+void aes_encrypt(const char* fname_key, const char* fname_in, const char* fname_out)
 {
 	int key_size = 0;
 	BYTE* key = read_file(fname_key, &key_size, true);
 
 	int msg_len = 0;
-	BYTE* p_text = read_file(fname_in, &msg_len);
+	BYTE* p_text_org = read_file(fname_in, &msg_len);
 	int padding_len = 16 - (msg_len % 16);
 	int cipher_len = msg_len + padding_len;
+
+	BYTE* p_text = (BYTE*)malloc(cipher_len);
+	memcpy(p_text, p_text_org, msg_len);
+
+	// 패딩 처리
+	memset(p_text+msg_len, padding_len, padding_len);
+//	print_byte_array("p_text with padding", p_text, cipher_len);
+	
 	BYTE* c_text = (BYTE*)malloc(cipher_len); 
 	memset(c_text, 0, cipher_len);
 
@@ -157,18 +167,18 @@ int aes_encrypt(const char* fname_key, const char* fname_in, const char* fname_o
 	free(key);
 	free(c_text);
 	free(p_text);
-
-	return padding_len;
+	free(p_text_org);
 }
 
 // fnmae_cipher 파일을 읽어 AES 복호화한 후 fname_decoded_plain 파일에 저장한다.
-void aes_decrypt(const char* fname_key, int padding_len, const char* fnmae_cipher, const char* fname_decoded_plain)
+void aes_decrypt(const char* fname_key, const char* fnmae_cipher, const char* fname_decoded_plain)
 {
 	int key_size = 0;
 	BYTE* key = read_file(fname_key, &key_size, true);
 
 	int msg_len = 0;
 	BYTE* c_text = read_file(fnmae_cipher, &msg_len, true);
+	assert(msg_len % 16 == 0);
 	
 	print_byte_array("read cipher", c_text, msg_len);
 
@@ -190,6 +200,9 @@ void aes_decrypt(const char* fname_key, int padding_len, const char* fnmae_ciphe
 //	for(int i=0; i<msg_len-padding_len; i++)
 //		printf("%c", inv_c_text[i]);
 //	printf("\n-------------\n");
+
+	int padding_len = inv_c_text[msg_len-1];
+	printf("*padding_len : %d\n", padding_len);
 
 	write_file(inv_c_text, msg_len-padding_len, fname_decoded_plain);
 
@@ -218,10 +231,10 @@ void main()
 	// PKCS7 의 표준 패딩방식을 적용할것.
 	// http://en.wikipedia.org/wiki/Padding_(cryptography)#Bit_padding
 	// AES 암호화
-	int padding_len = aes_encrypt(fname_key, fname_plain, fname_cipher);
+	aes_encrypt(fname_key, fname_plain, fname_cipher);
 
 	// AES 복호화 
-	aes_decrypt(fname_key, padding_len, fname_cipher, fname_decoded_plain);
+	aes_decrypt(fname_key, fname_cipher, fname_decoded_plain);
 
 	// 해시값 생성
 	make_hash(fname_key, fname_decoded_plain, fname_rehash);
